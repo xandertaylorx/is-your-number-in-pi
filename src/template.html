@@ -1,0 +1,494 @@
+<title>Is Your Number in Pi?</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one narrow column. Query field, a verdict, then a printed-table excerpt of pi (blocks of ten, rows labelled by decimal place) and the odds across all known digits. */
+:root {
+  --bg: #EEF1F6;
+  --surface: #FFFFFF;
+  --ink: #121A33;
+  --muted: #566080;
+  --rule: #CCD3E3;
+  --accent: #2B3FD6;
+  --accent-ink: #FFFFFF;
+  --mark: #FFD84A;
+  --mark-ink: #1A1500;
+  --good: #0B6B43;
+  --good-bg: #DCF2E7;
+  --info: #2B3FD6;
+  --info-bg: #E2E7FB;
+  --warn: #7A4D00;
+  --warn-bg: #FAEAC6;
+  --low: #9A3322;
+  --low-bg: #F6DFDA;
+  --font-ui: "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D1224;
+    --surface: #151B33;
+    --ink: #E4E9F8;
+    --muted: #94A0C4;
+    --rule: #2A3355;
+    --accent: #8C9BFF;
+    --accent-ink: #0D1224;
+    --good: #66D9A2;
+    --good-bg: #12332A;
+    --info: #9AA8FF;
+    --info-bg: #1B2455;
+    --warn: #F2C46B;
+    --warn-bg: #3A2D10;
+    --low: #F2A394;
+    --low-bg: #3B1D1A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D1224;
+  --surface: #151B33;
+  --ink: #E4E9F8;
+  --muted: #94A0C4;
+  --rule: #2A3355;
+  --accent: #8C9BFF;
+  --accent-ink: #0D1224;
+  --good: #66D9A2;
+  --good-bg: #12332A;
+  --info: #9AA8FF;
+  --info-bg: #1B2455;
+  --warn: #F2C46B;
+  --warn-bg: #3A2D10;
+  --low: #F2A394;
+  --low-bg: #3B1D1A;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap {
+  max-width: 620px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.kicker {
+  margin: 0 0 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+h1 {
+  margin: 0;
+  font-size: clamp(32px, 9vw, 46px);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  text-wrap: balance;
+}
+.lede { margin: 10px 0 0; color: var(--muted); max-width: 52ch; }
+
+form { display: flex; flex-direction: column; gap: 8px; }
+label { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
+.field { display: flex; flex-wrap: wrap; gap: 10px; }
+input[type="text"] {
+  flex: 1 1 200px;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  padding: 12px 14px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+}
+button {
+  flex: 0 0 auto;
+  font: 600 16px var(--font-ui);
+  padding: 12px 20px;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.08); }
+input:focus-visible, button:focus-visible, a:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.hint { margin: 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+fieldset.modes { margin: 4px 0 0; padding: 0; border: 0; min-width: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+fieldset.modes legend { float: left; margin-right: 18px; padding: 0; font-size: 13px; font-weight: 600; }
+fieldset.modes label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; font-family: var(--font-mono); cursor: pointer; }
+fieldset.modes input { accent-color: var(--accent); margin: 0; width: 16px; height: 16px; }
+
+.status { margin: 0; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: 0 0 auto; }
+.status[data-state="done"] .dot { background: var(--good); }
+.status[data-state="error"] .dot { background: var(--low); }
+.status span:not(.dot) { min-width: 0; }
+button.linkbtn {
+  margin-left: auto;
+  padding: 2px 4px;
+  font: 600 13px var(--font-ui);
+  color: var(--accent);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+button.linkbtn:hover { filter: none; text-decoration-thickness: 2px; }
+
+#result { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.placeholder {
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed var(--rule);
+  border-radius: 8px;
+  color: var(--muted);
+}
+
+.verdict {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.verdict .top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
+.pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--muted);
+  background: var(--rule);
+}
+.verdict[data-state="found"] .pill { color: var(--good); background: var(--good-bg); }
+.verdict[data-state="certain"] .pill, .verdict[data-state="probable"] .pill { color: var(--info); background: var(--info-bg); }
+.verdict[data-state="possible"] .pill { color: var(--warn); background: var(--warn-bg); }
+.verdict[data-state="unlikely"] .pill { color: var(--low); background: var(--low-bg); }
+.verdict .q { font-family: var(--font-mono); font-size: 13px; color: var(--muted); overflow-wrap: anywhere; min-width: 0; }
+.verdict h2 { margin: 0; font-size: 28px; line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; }
+.verdict .sub { margin: 0; color: var(--muted); }
+.verdict .sub strong { color: var(--ink); font-weight: 600; }
+
+.block { border-top: 1px solid var(--rule); padding-top: 14px; min-width: 0; }
+.block h3 { margin: 0 0 10px; font-size: 14px; font-weight: 700; letter-spacing: 0.01em; }
+.note { margin: 10px 0 0; font-size: 13px; color: var(--muted); max-width: 60ch; }
+
+.tape { overflow-x: auto; display: flex; flex-direction: column; gap: 4px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.row { display: flex; gap: 14px; align-items: baseline; white-space: nowrap; }
+.pl { flex: 0 0 7ch; text-align: right; font-size: 12px; color: var(--muted); }
+.dg { font-size: 15px; letter-spacing: 0.02em; }
+mark {
+  background: var(--mark);
+  color: var(--mark-ink);
+  font-weight: 700;
+  padding: 1px 0;
+  border-radius: 2px;
+}
+
+dl { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; font-variant-numeric: tabular-nums; }
+dt { color: var(--muted); }
+dd { margin: 0; text-align: right; font-family: var(--font-mono); font-weight: 500; }
+
+footer { border-top: 1px solid var(--rule); padding-top: 14px; font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
+footer p { margin: 0; max-width: 62ch; }
+footer a { color: var(--accent); text-underline-offset: 3px; }
+</style>
+
+<main class="wrap">
+  <header>
+    <p class="kicker">&pi; = 3.14159 26535 89793 23846 &hellip;</p>
+    <h1>Is your number in pi?</h1>
+    <p class="lede">Type a phone number, a birthday, even a word. This page works out pi in your browser and looks for it.</p>
+  </header>
+
+  <form id="f" autocomplete="off">
+    <label for="q">Digits or words to look for</label>
+    <div class="field">
+      <input id="q" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="80" value="999999" aria-describedby="hint">
+      <button type="submit">Search pi</button>
+    </div>
+    <fieldset class="modes">
+      <legend>Letters become numbers</legend>
+      <label><input type="radio" name="mode" value="a1" checked> A=1 &hellip; Z=26</label>
+      <label><input type="radio" name="mode" value="a01"> A=01 &hellip; Z=26</label>
+      <label><input type="radio" name="mode" value="keypad"> Phone keypad</label>
+    </fieldset>
+    <p id="hint" class="hint">Example loaded: six 9s in a row. Spaces, dashes and + are ignored.</p>
+  </form>
+
+  <p id="status" class="status" role="status" data-state="busy"><span class="dot" aria-hidden="true"></span><span id="status-text">Computing digits of pi&hellip;</span><button type="button" id="stop" class="linkbtn" hidden>Stop</button></p>
+
+  <div id="result" aria-live="polite">
+    <p class="placeholder">Working out the first digits of pi. Your result appears here in a moment.</p>
+  </div>
+
+  <footer>
+    <p>The most digits anyone has computed is 314 trillion (StorageReview, 2025). A browser can&rsquo;t hold that, so this page calculates up to the first 20 million digits itself, searches those, and estimates the rest.</p>
+    <p>Everything runs on your device. The number you type is never sent anywhere.</p>
+    <p>For a bigger lookup, the <a href="https://www.angio.net/pi/" target="_blank" rel="noopener">Pi-Search Page at angio.net</a> searches a larger precomputed file.</p>
+  </footer>
+</main>
+
+<script>
+/*ENGINE*/
+</script>
+<script>
+(function () {
+  var KNOWN = 314e12;
+  var EXAMPLE = "999999";
+  var MAX_LEN = 60;
+  var STAGES = [100000, 1000000, 10000000, 20000000];
+  var digits = "";
+  var touched = false;
+  var worker = null;
+  var stopBtn = document.getElementById("stop");
+
+  var q = document.getElementById("q");
+  var form = document.getElementById("f");
+  var hint = document.getElementById("hint");
+  var result = document.getElementById("result");
+  var statusEl = document.getElementById("status");
+  var statusText = document.getElementById("status-text");
+
+  function fmtInt(n) { return n.toLocaleString("en-GB"); }
+
+  var KEYPAD = { a: 2, b: 2, c: 2, d: 3, e: 3, f: 3, g: 4, h: 4, i: 4, j: 5, k: 5, l: 5, m: 6, n: 6, o: 6, p: 7, q: 7, r: 7, s: 7, t: 8, u: 8, v: 8, w: 9, x: 9, y: 9, z: 9 };
+  var MODE_NAMES = { a1: "A=1 to Z=26", a01: "A=01 to Z=26", keypad: "phone keypad" };
+  var modeEls = document.querySelectorAll('input[name="mode"]');
+
+  function modeValue() {
+    for (var i = 0; i < modeEls.length; i++) { if (modeEls[i].checked) return modeEls[i].value; }
+    return "a1";
+  }
+
+  // Digits stay digits. Letters become numbers by the chosen scheme. Anything else is ignored.
+  function encode(raw) {
+    var mode = modeValue();
+    var norm = raw.normalize ? raw.normalize("NFD").replace(/[̀-ͯ]/g, "") : raw;
+    var out = "", src = "", letters = false;
+    for (var i = 0; i < norm.length; i++) {
+      var c = norm.charAt(i);
+      var l = c.toLowerCase();
+      if (c >= "0" && c <= "9") {
+        out += c; src += c;
+      } else if (l >= "a" && l <= "z") {
+        letters = true;
+        src += c.toUpperCase();
+        var k = l.charCodeAt(0) - 96;
+        if (mode === "keypad") out += String(KEYPAD[l]);
+        else if (mode === "a01") out += (k < 10 ? "0" : "") + k;
+        else out += String(k);
+      } else if (src && src.charAt(src.length - 1) !== " " && /[\s\-.,'_]/.test(c)) {
+        src += " ";
+      }
+    }
+    return { digits: out, src: src.replace(/\s+$/, ""), letters: letters, mode: mode };
+  }
+
+  function expectedText(e) {
+    if (e >= 1000) {
+      return new Intl.NumberFormat("en-GB", { notation: "compact", compactDisplay: "long", maximumFractionDigits: 1 }).format(e);
+    }
+    if (e >= 10) return String(Math.round(e));
+    if (e >= 1) return e.toFixed(1);
+    return e.toFixed(2);
+  }
+
+  function chanceText(p) {
+    if (p >= 0.9999) return "over 99.99%";
+    var pct = p * 100;
+    if (pct < 0.01) return "under 0.01%";
+    return pct >= 10 ? pct.toFixed(1) + "%" : pct.toFixed(2) + "%";
+  }
+
+  function setStatus(state, text) {
+    statusEl.setAttribute("data-state", state);
+    statusText.textContent = text;
+  }
+
+  function excerpt(idx, n) {
+    var ROW = 30;
+    var first = Math.floor(idx / ROW);
+    var last = Math.floor((idx + n - 1) / ROW);
+    var from = Math.max(0, first - 1);
+    var to = Math.min(Math.floor((digits.length - 1) / ROW), last + 1);
+    var html = "";
+    for (var r = from; r <= to; r++) {
+      var start = r * ROW;
+      var chunk = digits.slice(start, start + ROW);
+      var groups = [];
+      for (var g = 0; g < chunk.length; g += 10) {
+        var s = "";
+        var open = false;
+        for (var i = g; i < Math.min(g + 10, chunk.length); i++) {
+          var abs = start + i;
+          var inMatch = abs >= idx && abs < idx + n;
+          if (inMatch && !open) { s += "<mark>"; open = true; }
+          if (!inMatch && open) { s += "</mark>"; open = false; }
+          s += chunk.charAt(i);
+        }
+        if (open) s += "</mark>";
+        groups.push(s);
+      }
+      html += '<div class="row"><span class="pl">' + (start + 1) + '</span><span class="dg">' + groups.join(" ") + "</span></div>";
+    }
+    return html;
+  }
+
+  function verdict(idx, n, e, p) {
+    if (idx >= 0) {
+      var sub = "The first match starts at decimal place <strong>" + fmtInt(idx + 1) + "</strong>.";
+      if (n === 6 && idx + 1 === 762 && digits.substr(idx, 6) === "999999") {
+        sub += " This is the Feynman point: six 9s in a row, remarkably early.";
+      }
+      return { state: "found", pill: "Found", head: "Yes, it&rsquo;s in pi.", sub: sub };
+    }
+    var searched = fmtInt(digits.length);
+    var tail = e >= 1
+      ? "A " + n + "-digit string is expected to appear about <strong>" + expectedText(e) + "</strong> times in the 314 trillion digits on record."
+      : "Across the 314 trillion digits on record it has about a <strong>" + chanceText(p) + "</strong> chance of appearing at all.";
+    var base = "It isn&rsquo;t in the first " + searched + " digits this page has computed. " + tail;
+    if (p >= 0.99) return { state: "certain", pill: "Almost certain", head: "Almost certainly yes.", sub: base };
+    if (p >= 0.5) return { state: "probable", pill: "Probable", head: "Probably yes.", sub: base };
+    if (p >= 0.1) return { state: "possible", pill: "Possible", head: "Possibly, not likely.", sub: base };
+    return { state: "unlikely", pill: "Unlikely", head: "Probably not.", sub: base + " Each extra digit makes a match ten times rarer." };
+  }
+
+  function run() {
+    var raw = q.value;
+    var enc = encode(raw);
+    var cleaned = enc.digits;
+    var trimmed = false;
+    if (cleaned.length > MAX_LEN) { cleaned = cleaned.slice(0, MAX_LEN); trimmed = true; }
+    var n = cleaned.length;
+
+    if (!digits) {
+      result.innerHTML = '<p class="placeholder">Working out the first digits of pi. Your result appears here in a moment.</p>';
+      return;
+    }
+    if (n === 0) {
+      result.innerHTML = '<p class="placeholder">Type at least one digit or letter above to search.</p>';
+      hint.textContent = "Spaces, dashes and + are ignored.";
+      return;
+    }
+
+    var idx = digits.indexOf(cleaned);
+    var e = KNOWN / Math.pow(10, n);
+    var p = -Math.expm1(-e);
+    var v = verdict(idx, n, e, p);
+
+    var html = '<div class="verdict" data-state="' + v.state + '">' +
+      '<div class="top"><span class="pill">' + v.pill + '</span><span class="q">' + (enc.letters ? enc.src + " &rarr; " : "") + cleaned + " &middot; " + n + (n === 1 ? " digit" : " digits") + (trimmed ? " (first " + MAX_LEN + " used)" : "") + "</span></div>" +
+      "<h2>" + v.head + "</h2><p class=\"sub\">" + v.sub + "</p></div>";
+
+    if (idx >= 0) {
+      html += '<section class="block"><h3>Where it sits</h3><div class="tape" role="group" aria-label="Digits of pi around the match">' + excerpt(idx, n) + "</div>" +
+        '<p class="note">Digits come in blocks of ten. The left column is the decimal place of each row&rsquo;s first digit.</p></section>';
+    }
+
+    html += '<section class="block"><h3>In all 314 trillion known digits</h3><dl>' +
+      "<dt>Digits in your number</dt><dd>" + n + "</dd>" +
+      "<dt>Expected appearances</dt><dd>" + (e >= 1 ? "about " : "") + expectedText(e) + "</dd>" +
+      "<dt>Chance of at least one</dt><dd>" + chanceText(p) + "</dd></dl>" +
+      '<p class="note">An estimate, not a lookup. It assumes pi&rsquo;s digits behave like random digits, which is strongly suspected but unproven. Only the digits this page computes are actually searched.</p></section>';
+
+    result.innerHTML = html;
+    if (enc.letters) {
+      hint.textContent = "Letters turned into numbers (" + MODE_NAMES[enc.mode] + "). Searching for " + cleaned;
+    } else if (cleaned !== raw.trim() && raw.trim() !== "") {
+      hint.textContent = "Searching for the digits only: " + cleaned;
+    } else {
+      hint.textContent = "Spaces, dashes and + are ignored.";
+    }
+  }
+
+  function onDigits(count, s, ms) {
+    if (s.length <= digits.length) return;
+    digits = s;
+    var next = 0;
+    for (var i = 0; i < STAGES.length; i++) {
+      if (STAGES[i] > count) { next = STAGES[i]; break; }
+    }
+    if (next) {
+      setStatus("busy", fmtInt(count) + " digits ready and searchable. Computing " + fmtInt(next) + " now.");
+      stopBtn.hidden = false;
+    } else {
+      setStatus("done", fmtInt(count) + " digits ready (last pass " + (ms / 1000).toFixed(0) + " s). Searches run on this device.");
+      stopBtn.hidden = true;
+    }
+    run();
+  }
+
+  function startMainThreadFallback() {
+    setTimeout(function () {
+      try {
+        var t = Date.now();
+        var s = piDecimals(100000);
+        onDigits(100000, s, Date.now() - t);
+        setStatus("error", "Background computing isn’t available here, so only the first 100,000 digits are searched.");
+      } catch (err) {
+        setStatus("error", "Couldn’t compute pi in this browser.");
+      }
+    }, 30);
+  }
+
+  function startWorker() {
+    try {
+      var src = [bitLength, isqrt, piDecimals].map(function (f) { return f.toString(); }).join("\n") +
+        "\nonmessage=function(e){var t=Date.now();var n=e.data;var s=piDecimals(n);postMessage({n:n,s:s,ms:Date.now()-t});};";
+      var url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+      var w = new Worker(url);
+      worker = w;
+      var failed = false;
+      w.onmessage = function (ev) { onDigits(ev.data.n, ev.data.s, ev.data.ms); };
+      w.onerror = function () {
+        if (failed) return;
+        failed = true;
+        if (!digits) startMainThreadFallback();
+        else { setStatus("error", "Stopped early. Searching the first " + fmtInt(digits.length) + " digits."); stopBtn.hidden = true; }
+      };
+      STAGES.forEach(function (n) { w.postMessage(n); });
+    } catch (err) {
+      startMainThreadFallback();
+    }
+  }
+
+  stopBtn.addEventListener("click", function () {
+    if (worker) { worker.terminate(); worker = null; }
+    stopBtn.hidden = true;
+    setStatus("done", "Stopped. Searching the first " + fmtInt(digits.length) + " digits.");
+  });
+  q.addEventListener("focus", function () { if (!touched) q.select(); });
+  q.addEventListener("input", function () { touched = true; run(); });
+  for (var mi = 0; mi < modeEls.length; mi++) {
+    modeEls[mi].addEventListener("change", function () { run(); });
+  }
+  form.addEventListener("submit", function (ev) { ev.preventDefault(); touched = true; run(); });
+
+  startWorker();
+})();
+</script>
